@@ -4,8 +4,8 @@
   "description": "Secure disk wiping and formatting tool for bootable Linux USB",
   "main": "main.js",
   "scripts": {
-    "start": "electron . --no-sandbox",
-    "dev": "electron . --dev --no-sandbox",
+    "start": "chmod -R 755 node_modules/electron/dist && chown -R root:root node_modules/electron/dist && electron . --no-sandbox --disable-gpu --disable-dev-shm-usage",
+    "dev": "chmod -R 755 node_modules/electron/dist && electron . --dev --no-sandbox",
     "build": "electron-builder",
     "build-linux": "electron-builder --linux",
     "build-win": "electron-builder --win",

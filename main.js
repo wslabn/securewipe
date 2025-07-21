@@ -33,6 +33,9 @@ function createSplashWindow() {
 }
 
 function createWindow() {
+  // Check if we can create a GUI window
+  const hasDisplay = process.env.DISPLAY || (process.platform !== 'linux');
+  
   // Create the main window but don't show it yet
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -45,10 +48,17 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'icon.png'),
     show: false,
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
+    // Use offscreen rendering if no display is available
+    offscreen: !hasDisplay
   });
 
   mainWindow.loadFile('renderer/index.html');
+
+  // Handle window creation errors
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorDescription);
+  });
 
   // When main window is ready, show it and close splash
   mainWindow.once('ready-to-show', () => {
@@ -57,9 +67,26 @@ function createWindow() {
         splashWindow.close();
         splashWindow = null;
       }
-      mainWindow.show();
+      try {
+        mainWindow.show();
+      } catch (error) {
+        console.error('Error showing window:', error);
+        console.log('Continuing in headless mode...');
+      }
     }, 1000); // Minimum splash display time
   });
+}
+
+// Disable GPU acceleration on Linux
+if (process.platform === 'linux') {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
 }
 
 app.whenReady().then(() => {
