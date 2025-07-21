@@ -1,0 +1,83 @@
+name: Build SecureWipe ISO
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux
+    
+    - name: Download Ubuntu ISO
+      run: |
+        wget -O ubuntu-22.04.3-desktop-amd64.iso \
+          https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso
+    
+    - name: Build SecureWipe ISO
+      run: |
+        # Extract Ubuntu ISO
+        mkdir -p /tmp/iso-mount /tmp/iso-extract
+        sudo mount -o loop ubuntu-22.04.3-desktop-amd64.iso /tmp/iso-mount
+        sudo cp -rT /tmp/iso-mount /tmp/iso-extract
+        sudo umount /tmp/iso-mount
+        sudo chmod -R +w /tmp/iso-extract
+        
+        # Install SecureWipe
+        sudo mkdir -p /tmp/iso-extract/home/securewipe
+        sudo cp -r ./* /tmp/iso-extract/home/securewipe/
+        
+        # Create autostart
+        sudo mkdir -p /tmp/iso-extract/etc/skel/.config/autostart
+        sudo cp autostart.desktop /tmp/iso-extract/etc/skel/.config/autostart/
+        
+        # Build ISO
+        cd /tmp/iso-extract
+        sudo mkisofs -D -r -V "SecureWipe Live" -cache-inodes -J -l \
+          -b isolinux/isolinux.bin -c isolinux/boot.cat \
+          -no-emul-boot -boot-load-size 4 -boot-info-table \
+          -o /tmp/securewipe-live.iso .
+        
+        # Make hybrid bootable
+        sudo isohybrid /tmp/securewipe-live.iso
+        
+        # Move to workspace
+        sudo mv /tmp/securewipe-live.iso ./securewipe-live.iso
+        sudo chown runner:runner ./securewipe-live.iso
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: securewipe-live.iso
+        name: SecureWipe ${{ github.ref_name }}
+        body: |
+          ## SecureWipe Bootable USB Image
+          
+          **Download**: `securewipe-live.iso`
+          **Size**: ~5GB
+          **Base**: Ubuntu 22.04 LTS
+          
+          ### Usage:
+          1. Write ISO to USB drive
+          2. Boot from USB
+          3. SecureWipe starts automatically
+          
+          ### Write to USB:
+          ```bash
+          # Linux
+          sudo dd if=securewipe-live.iso of=/dev/sdX bs=4M status=progress
+          
+          # Windows (PowerShell as Admin)
+          dd if=securewipe-live.iso of=\\.\E: bs=4M
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
