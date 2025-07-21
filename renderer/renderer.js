@@ -1,15 +1,27 @@
 class SecureWipeApp {
     constructor() {
-        this.selectedDisk = null;
+        this.selectedDisks = [];
         this.currentOperation = null;
+        this.systemDisk = null;
+        this.maxDiskSelection = 8; // Reasonable limit for parallel operations
         this.init();
     }
 
     async init() {
         await this.loadPlatformInfo();
+        await this.loadSystemDisk();
         await this.loadDisks();
         this.setupEventListeners();
         this.setupProgressListeners();
+    }
+
+    async loadSystemDisk() {
+        try {
+            const result = await window.electronAPI.getSystemDisk();
+            this.systemDisk = result.device;
+        } catch (error) {
+            console.error('Error loading system disk:', error);
+        }
     }
 
     async loadPlatformInfo() {
@@ -47,37 +59,157 @@ class SecureWipeApp {
 
     createDiskElement(disk) {
         const diskDiv = document.createElement('div');
-        diskDiv.className = 'disk-item';
+        const isSystemDisk = disk.isSystemDisk || (this.systemDisk && disk.device.includes(this.systemDisk.replace(/\d+$/, '')));
+        
+        diskDiv.className = `disk-item ${isSystemDisk ? 'system-disk' : ''}`;
         diskDiv.dataset.device = disk.device;
         
+        let statusText = '';
+        if (isSystemDisk) {
+            statusText = '🚫 System Disk (Protected)';
+        } else if (disk.mounted) {
+            statusText = '⚠️ Mounted';
+        } else {
+            statusText = '✅ Available';
+        }
+        
         diskDiv.innerHTML = `
-            <div class="disk-name">${disk.device} - ${disk.model || 'Unknown Model'}</div>
+            <div class="disk-header">
+                <input type="checkbox" class="disk-checkbox" ${isSystemDisk ? 'disabled' : ''} data-device="${disk.device}">
+                <div class="disk-name">${disk.device} - ${disk.model || 'Unknown Model'}</div>
+            </div>
             <div class="disk-details">
                 Size: ${this.formatBytes(disk.size)} | 
                 Type: ${disk.type || 'Unknown'} |
-                ${disk.mounted ? '⚠️ Mounted' : '✅ Available'}
+                ${statusText}
             </div>
         `;
 
-        diskDiv.addEventListener('click', () => this.selectDisk(disk, diskDiv));
+        const checkbox = diskDiv.querySelector('.disk-checkbox');
+        if (!isSystemDisk) {
+            checkbox.addEventListener('change', (e) => this.toggleDiskSelection(disk, e.target.checked));
+        }
+        
         return diskDiv;
     }
 
-    async selectDisk(disk, element) {
-        // Remove previous selection
-        document.querySelectorAll('.disk-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-
-        // Select current disk
-        element.classList.add('selected');
-        this.selectedDisk = disk;
-
-        // Load detailed disk info
-        await this.loadDiskInfo(disk.device);
+    toggleDiskSelection(disk, isSelected) {
+        if (isSelected) {
+            if (this.selectedDisks.length >= this.maxDiskSelection) {
+                // Uncheck the checkbox and show warning
+                const checkbox = document.querySelector(`[data-device="${disk.device}"]`);
+                checkbox.checked = false;
+                alert(`Maximum ${this.maxDiskSelection} disks can be selected for simultaneous processing.`);
+                return;
+            }
+            if (!this.selectedDisks.find(d => d.device === disk.device)) {
+                this.selectedDisks.push(disk);
+            }
+        } else {
+            this.selectedDisks = this.selectedDisks.filter(d => d.device !== disk.device);
+        }
         
-        // Show operation section
-        document.getElementById('operationSection').style.display = 'block';
+        this.updateSelectionDisplay();
+        this.updateDiskCheckboxStates();
+    }
+
+    updateDiskCheckboxStates() {
+        const checkboxes = document.querySelectorAll('.disk-checkbox:not([disabled])');
+        const limitReached = this.selectedDisks.length >= this.maxDiskSelection;
+        
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                checkbox.disabled = limitReached;
+                const diskItem = checkbox.closest('.disk-item');
+                if (limitReached) {
+                    diskItem.classList.add('limit-reached');
+                } else {
+                    diskItem.classList.remove('limit-reached');
+                }
+            }
+        });
+    }
+
+    async updateSelectionDisplay() {
+        const diskInfoSection = document.getElementById('diskInfoSection');
+        const operationSection = document.getElementById('operationSection');
+        
+        if (this.selectedDisks.length === 0) {
+            diskInfoSection.style.display = 'none';
+            operationSection.style.display = 'none';
+            return;
+        }
+        
+        // Show selected disks info
+        await this.loadSelectedDisksInfo();
+        diskInfoSection.style.display = 'block';
+        operationSection.style.display = 'block';
+    }
+
+    async loadSelectedDisksInfo() {
+        const diskInfoDiv = document.getElementById('diskInfo');
+        
+        if (this.selectedDisks.length === 1) {
+            // Single disk - show detailed info
+            const disk = this.selectedDisks[0];
+            try {
+                const info = await window.electronAPI.getDiskInfo(disk.device);
+                
+                if (info.error) {
+                    diskInfoDiv.innerHTML = `<div class="error">Error: ${info.error}</div>`;
+                    return;
+                }
+
+                diskInfoDiv.innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">Device:</span>
+                        <span>${info.device}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Size:</span>
+                        <span>${this.formatBytes(info.size)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Model:</span>
+                        <span>${info.model || 'Unknown'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">File System:</span>
+                        <span>${info.filesystem || 'Unknown'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mount Status:</span>
+                        <span>${info.mounted ? '⚠️ Mounted' : '✅ Unmounted'}</span>
+                    </div>
+                `;
+            } catch (error) {
+                diskInfoDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        } else {
+            // Multiple disks - show summary
+            const totalSize = this.selectedDisks.reduce((sum, disk) => sum + disk.size, 0);
+            diskInfoDiv.innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">Selected Disks:</span>
+                    <span>${this.selectedDisks.length}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Total Size:</span>
+                    <span>${this.formatBytes(totalSize)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Selection Limit:</span>
+                    <span>${this.selectedDisks.length}/${this.maxDiskSelection}</span>
+                </div>
+                <div class="selected-disks-list">
+                    ${this.selectedDisks.map(disk => `
+                        <div class="selected-disk-item">
+                            ${disk.device} - ${disk.model || 'Unknown'} (${this.formatBytes(disk.size)})
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
     }
 
     async loadDiskInfo(devicePath) {
@@ -141,8 +273,19 @@ class SecureWipeApp {
             this.startOperation();
         });
 
+        // Format after wipe checkbox
+        document.getElementById('formatAfterWipe').addEventListener('change', (e) => {
+            const formatOptions = document.getElementById('formatAfterWipeOptions');
+            formatOptions.style.display = e.target.checked ? 'block' : 'none';
+        });
+
         // Cancel operation button
         document.getElementById('cancelOperation').addEventListener('click', () => {
+            this.cancelOperation();
+        });
+
+        // Cancel operation button in modal
+        document.getElementById('cancelOperationModal').addEventListener('click', () => {
             this.cancelOperation();
         });
 
@@ -158,6 +301,10 @@ class SecureWipeApp {
         });
 
         window.electronAPI.onFormatProgress((event, progress) => {
+            this.updateProgress(progress);
+        });
+        
+        window.electronAPI.onMultiDiskProgress((event, progress) => {
             this.updateProgress(progress);
         });
     }
@@ -177,32 +324,40 @@ class SecureWipeApp {
     }
 
     async startOperation() {
-        if (!this.selectedDisk) {
-            alert('Please select a disk first');
+        if (this.selectedDisks.length === 0) {
+            alert('Please select at least one disk first');
             return;
         }
 
         const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
-        const confirmMessage = `Are you sure you want to ${activeTab} ${this.selectedDisk.device}?\n\nThis will permanently destroy all data on the disk!`;
+        const options = this.getOperationOptions(activeTab);
+        
+        const diskList = this.selectedDisks.map(d => d.device).join(', ');
+        let confirmMessage = `Are you sure you want to ${activeTab} ${this.selectedDisks.length} disk(s)?\n\nDisks: ${diskList}`;
+        
+        if (activeTab === 'wipe' && options.formatAfter) {
+            confirmMessage += `\n\nOperation: Wipe (${options.method}) + Format (${options.filesystem})`;
+        } else if (activeTab === 'wipe') {
+            confirmMessage += `\n\nWipe method: ${options.method}`;
+        } else {
+            confirmMessage += `\n\nFormat to: ${options.filesystem}`;
+        }
+        
+        confirmMessage += `\n\nThis will permanently destroy all data on the selected disks!`;
         
         const confirmed = await window.electronAPI.showConfirmation(confirmMessage);
         if (!confirmed) return;
 
-        // Hide operation section and show progress
-        document.getElementById('operationSection').style.display = 'none';
-        document.getElementById('progressSection').style.display = 'block';
-
-        const options = this.getOperationOptions(activeTab);
+        // Show progress modal
+        this.showProgressModal();
         
         try {
-            let result;
-            if (activeTab === 'wipe') {
-                this.currentOperation = 'wipe';
-                result = await window.electronAPI.wipeDisk(options);
-            } else {
-                this.currentOperation = 'format';
-                result = await window.electronAPI.formatDisk(options);
-            }
+            this.currentOperation = activeTab;
+            const result = await window.electronAPI.processMultipleDisks({
+                disks: this.selectedDisks,
+                operation: activeTab,
+                ...options
+            });
 
             this.showResults(result);
         } catch (error) {
@@ -213,7 +368,6 @@ class SecureWipeApp {
 
     getOperationOptions(operation) {
         const options = {
-            device: this.selectedDisk.device,
             operation: operation
         };
 
@@ -221,7 +375,8 @@ class SecureWipeApp {
             options.method = document.getElementById('wipeMethod').value;
             options.formatAfter = document.getElementById('formatAfterWipe').checked;
             if (options.formatAfter) {
-                options.filesystem = 'ext4'; // Default for after wipe
+                options.filesystem = document.getElementById('wipeFormatSystem').value;
+                options.label = document.getElementById('wipeVolumeLabel').value;
             }
         } else {
             options.filesystem = document.getElementById('fileSystem').value;
@@ -231,18 +386,64 @@ class SecureWipeApp {
         return options;
     }
 
-    updateProgress(progress) {
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        const statusText = document.getElementById('operationStatus');
+    showProgressModal() {
+        const modal = document.getElementById('progressModal');
+        const progressList = document.getElementById('diskProgressList');
+        
+        // Initialize progress for each disk
+        progressList.innerHTML = '';
+        this.diskProgress = {};
+        
+        this.selectedDisks.forEach(disk => {
+            this.diskProgress[disk.device] = 0;
+            const progressItem = document.createElement('div');
+            progressItem.className = 'disk-progress-item';
+            progressItem.id = `progress-${disk.device.replace(/[^a-zA-Z0-9]/g, '')}`;
+            
+            progressItem.innerHTML = `
+                <div class="disk-progress-header">
+                    <div class="disk-name">${disk.device}</div>
+                    <div class="disk-actions">
+                        <div class="disk-status">Starting...</div>
+                        <button class="btn-cancel-disk" data-device="${disk.device}">✕</button>
+                    </div>
+                </div>
+                <div class="disk-progress-bar">
+                    <div class="disk-progress-fill" style="width: 0%"></div>
+                </div>
+            `;
+            
+            // Add cancel event listener
+            const cancelBtn = progressItem.querySelector('.btn-cancel-disk');
+            cancelBtn.addEventListener('click', () => this.cancelIndividualDisk(disk.device));
+            
+            progressList.appendChild(progressItem);
+        });
+        
+        modal.style.display = 'flex';
+    }
+    
+    hideProgressModal() {
+        document.getElementById('progressModal').style.display = 'none';
+    }
 
-        progressFill.style.width = `${progress.percentage}%`;
-        progressText.textContent = `${progress.percentage}%`;
-        statusText.textContent = progress.status || 'Processing...';
+    updateProgress(progress) {
+        const deviceId = progress.device.replace(/[^a-zA-Z0-9]/g, '');
+        const progressItem = document.getElementById(`progress-${deviceId}`);
+        
+        if (progressItem && !progressItem.classList.contains('cancelled')) {
+            const statusEl = progressItem.querySelector('.disk-status');
+            const fillEl = progressItem.querySelector('.disk-progress-fill');
+            
+            statusEl.textContent = `${progress.percentage}% - ${progress.status || 'Processing...'}`;
+            fillEl.style.width = `${progress.percentage}%`;
+            
+            this.diskProgress[progress.device] = progress.percentage;
+        }
     }
 
     showResults(result) {
-        document.getElementById('progressSection').style.display = 'none';
+        this.hideProgressModal();
         document.getElementById('resultsSection').style.display = 'block';
 
         const resultsDiv = document.getElementById('results');
@@ -263,6 +464,34 @@ class SecureWipeApp {
         }
     }
 
+    async cancelIndividualDisk(device) {
+        const confirmed = await window.electronAPI.showConfirmation(`Cancel operation for ${device}?\n\nOther disks will continue processing.`);
+        if (!confirmed) return;
+        
+        try {
+            await window.electronAPI.cancelDiskOperation(device);
+            
+            // Update UI to show cancelled status
+            const deviceId = device.replace(/[^a-zA-Z0-9]/g, '');
+            const progressItem = document.getElementById(`progress-${deviceId}`);
+            if (progressItem) {
+                const statusEl = progressItem.querySelector('.disk-status');
+                const cancelBtn = progressItem.querySelector('.btn-cancel-disk');
+                const fillEl = progressItem.querySelector('.disk-progress-fill');
+                
+                progressItem.classList.add('cancelled');
+                statusEl.textContent = 'Cancelled';
+                statusEl.style.color = '#e53e3e';
+                cancelBtn.disabled = true;
+                cancelBtn.textContent = '✓';
+                fillEl.style.background = '#fed7d7';
+                progressItem.style.opacity = '0.6';
+            }
+        } catch (error) {
+            console.error('Error cancelling disk operation:', error);
+        }
+    }
+
     cancelOperation() {
         // TODO: Implement operation cancellation
         console.log('Cancel operation requested');
@@ -270,18 +499,23 @@ class SecureWipeApp {
 
     resetApp() {
         // Hide all sections except disk selection
+        this.hideProgressModal();
         document.getElementById('diskInfoSection').style.display = 'none';
         document.getElementById('operationSection').style.display = 'none';
         document.getElementById('progressSection').style.display = 'none';
         document.getElementById('resultsSection').style.display = 'none';
 
         // Reset selections
-        this.selectedDisk = null;
+        this.selectedDisks = [];
         this.currentOperation = null;
         
-        // Remove disk selections
+        // Uncheck all disk checkboxes and reset states
+        document.querySelectorAll('.disk-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+            checkbox.disabled = false;
+        });
         document.querySelectorAll('.disk-item').forEach(item => {
-            item.classList.remove('selected');
+            item.classList.remove('limit-reached');
         });
 
         // Refresh disk list

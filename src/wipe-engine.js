@@ -3,17 +3,17 @@ const os = require('os');
 const fs = require('fs').promises;
 
 class WipeEngine {
-    static async wipeDisk(options, progressCallback) {
+    static async wipeDisk(options, progressCallback, abortSignal) {
         const { device, method } = options;
         const platform = os.platform();
         
         console.log(`Starting wipe operation: ${method} on ${device}`);
         
         if (platform === 'linux') {
-            return await this.wipeLinuxDisk(device, method, progressCallback);
+            return await this.wipeLinuxDisk(device, method, progressCallback, abortSignal);
         } else {
             // For development on Windows, simulate the operation
-            return await this.simulateWipe(device, method, progressCallback);
+            return await this.simulateWipe(device, method, progressCallback, abortSignal);
         }
     }
 
@@ -141,12 +141,16 @@ class WipeEngine {
         });
     }
 
-    static async simulateWipe(device, method, progressCallback) {
+    static async simulateWipe(device, method, progressCallback, abortSignal) {
         // Simulate wipe operation for development/testing
         const totalSteps = method === 'gutmann' ? 35 : method === 'dod' ? 3 : 1;
         
         for (let step = 1; step <= totalSteps; step++) {
             for (let progress = 0; progress <= 100; progress += 10) {
+                if (abortSignal && abortSignal.aborted) {
+                    throw new Error('Operation cancelled');
+                }
+                
                 const overallProgress = Math.floor(((step - 1) / totalSteps * 100) + (progress / totalSteps));
                 
                 progressCallback({

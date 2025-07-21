@@ -87,18 +87,27 @@ class DiskManager {
         return {
             disks: [
                 {
-                    device: '/dev/sdb',
-                    name: 'sdb',
+                    device: 'PhysicalDrive0',
+                    name: 'PhysicalDrive0',
+                    size: 500000000000, // 500GB
+                    model: 'Samsung SSD 860 EVO (System)',
+                    type: 'disk',
+                    mounted: false,
+                    isSystemDisk: true
+                },
+                {
+                    device: 'PhysicalDrive1',
+                    name: 'PhysicalDrive1',
                     size: 1000000000000, // 1TB
-                    model: 'Mock Disk 1TB',
+                    model: 'Western Digital Blue',
                     type: 'disk',
                     mounted: false
                 },
                 {
-                    device: '/dev/sdc',
-                    name: 'sdc',
-                    size: 500000000000, // 500GB
-                    model: 'Mock Disk 500GB',
+                    device: 'PhysicalDrive2',
+                    name: 'PhysicalDrive2',
+                    size: 250000000000, // 250GB
+                    model: 'Kingston A400',
                     type: 'disk',
                     mounted: true
                 }

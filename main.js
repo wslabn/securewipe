@@ -20,15 +20,12 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'assets', 'icon.png'),
-    show: false
+    icon: path.join(__dirname, 'icon.png'),
+    show: false,
+    autoHideMenuBar: true
   });
 
   mainWindow.loadFile('renderer/index.html');
-  
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -100,6 +97,103 @@ ipcMain.handle('format-disk', async (event, options) => {
     });
   } catch (error) {
     console.error('Error formatting disk:', error);
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('get-system-disk', async () => {
+  try {
+    return await SafetyChecks.getBootDeviceInfo();
+  } catch (error) {
+    console.error('Error getting system disk:', error);
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('process-multiple-disks', async (event, options) => {
+  try {
+    const { disks, operation } = options;
+    
+    // Process all disks in parallel
+    const diskPromises = disks.map(async (disk, index) => {
+      const diskOptions = { ...options, device: disk.device };
+      const abortController = new AbortController();
+      
+      // Track this operation for cancellation
+      runningOperations.set(disk.device, { abortController });
+      
+      // Safety check for each disk
+      const safetyCheck = operation === 'wipe' 
+        ? await SafetyChecks.validateWipeOperation(diskOptions)
+        : await SafetyChecks.validateFormatOperation(diskOptions);
+        
+      if (!safetyCheck.safe) {
+        runningOperations.delete(disk.device);
+        return { device: disk.device, error: safetyCheck.reason };
+      }
+      
+      // Notify start of processing for this disk
+      mainWindow.webContents.send('multi-disk-progress', {
+        device: disk.device,
+        status: `Starting ${disk.device}...`,
+        totalDisks: disks.length
+      });
+      
+      try {
+        let result;
+        if (operation === 'wipe') {
+          result = await WipeEngine.wipeDisk(diskOptions, (progress) => {
+            mainWindow.webContents.send('multi-disk-progress', {
+              ...progress,
+              device: disk.device,
+              totalDisks: disks.length
+            });
+          }, abortController.signal);
+        } else {
+          result = await FormatManager.formatDisk(diskOptions, (progress) => {
+            mainWindow.webContents.send('multi-disk-progress', {
+              ...progress,
+              device: disk.device,
+              totalDisks: disks.length
+            });
+          }, abortController.signal);
+        }
+        
+        runningOperations.delete(disk.device);
+        return { device: disk.device, ...result };
+      } catch (error) {
+        runningOperations.delete(disk.device);
+        if (error.message === 'Operation cancelled') {
+          return { device: disk.device, cancelled: true };
+        }
+        return { device: disk.device, error: error.message };
+      }
+    });
+    
+    // Wait for all disks to complete
+    const results = await Promise.all(diskPromises);
+    
+    return { results };
+  } catch (error) {
+    console.error('Error processing multiple disks:', error);
+    return { error: error.message };
+  }
+});
+
+// Track running operations for cancellation
+const runningOperations = new Map();
+
+ipcMain.handle('cancel-disk-operation', async (event, device) => {
+  try {
+    const operation = runningOperations.get(device);
+    if (operation && operation.abortController) {
+      operation.abortController.abort();
+      runningOperations.delete(device);
+      return { success: true };
+    }
+    return { error: 'No running operation found for device' };
+  } catch (error) {
+    console.error('Error cancelling disk operation:', error);
     return { error: error.message };
   }
 });

@@ -18,6 +18,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   formatDisk: (options) => ipcRenderer.invoke('format-disk', options),
   onFormatProgress: (callback) => ipcRenderer.on('format-progress', callback),
   
+  // System info
+  getSystemDisk: () => ipcRenderer.invoke('get-system-disk'),
+  
+  // Multiple disk operations
+  processMultipleDisks: (options) => ipcRenderer.invoke('process-multiple-disks', options),
+  onMultiDiskProgress: (callback) => ipcRenderer.on('multi-disk-progress', callback),
+  cancelDiskOperation: (device) => ipcRenderer.invoke('cancel-disk-operation', device),
+  
   // UI helpers
   showConfirmation: (message) => ipcRenderer.invoke('show-confirmation', message),
   
