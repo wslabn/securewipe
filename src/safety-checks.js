@@ -105,13 +105,16 @@ class SafetyChecks {
             if (platform === 'linux') {
                 // Check if any partition of the device is mounted
                 const { stdout } = await execAsync(`mount | grep "^${device}"`);
-                return stdout.trim().length > 0;
+                const isMounted = stdout.trim().length > 0;
+                console.log(`Mount check for ${device}: ${isMounted ? 'mounted' : 'not mounted'}`);
+                return isMounted;
             } else if (platform === 'win32') {
                 // For Windows development, assume not mounted
                 return false;
             }
         } catch (error) {
             // If grep finds nothing, it returns non-zero exit code
+            console.log(`Mount check for ${device}: not mounted (no grep matches)`);
             return false;
         }
         
