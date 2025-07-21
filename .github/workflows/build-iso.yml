@@ -18,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux
+        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux rsync
     
     - name: Download Ubuntu ISO
       run: |
@@ -36,7 +36,7 @@ jobs:
         
         # Install SecureWipe (exclude large files)
         sudo mkdir -p /tmp/iso-extract/home/securewipe
-        sudo cp -r --exclude='*.iso' ./* /tmp/iso-extract/home/securewipe/
+        sudo rsync -av --exclude='*.iso' ./ /tmp/iso-extract/home/securewipe/
         
         # Create autostart
         sudo mkdir -p /tmp/iso-extract/etc/skel/.config/autostart

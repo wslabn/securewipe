@@ -2,6 +2,8 @@
 
 A secure disk wiping and formatting application built with Electron for bootable Linux USB environments. Features automated ISO building, GitHub integration, and enterprise-grade security.
 
+**Current Version**: v1.0.1 | **Status**: Production Ready
+
 ## 🚀 Quick Start
 
 ### Download Bootable ISO
@@ -103,6 +105,11 @@ npm run dev
 
 ## 🤖 Automated ISO Building
 
+### Automatic Building
+- **Every push to main** - ISO builds automatically
+- **Tagged releases** - Creates GitHub releases
+- **Development builds** - Available as artifacts
+
 ### Create Release (Windows)
 ```cmd
 build-release.bat
@@ -121,6 +128,10 @@ sudo ./create-usb-simple.sh
 
 # Windows - Guided creation with Rufus
 create-usb-windows.bat
+
+# Docker - Local ISO building
+docker build -t securewipe-builder .
+docker run -v $(pwd)/output:/output securewipe-builder
 ```
 
 ## 📊 Technical Specifications
