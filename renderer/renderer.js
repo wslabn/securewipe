@@ -333,13 +333,16 @@ class SecureWipeApp {
     }
 
     async startOperation() {
+        console.log('startOperation called');
         if (this.selectedDisks.length === 0) {
             alert('Please select at least one disk first');
             return;
         }
 
         const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+        console.log('Active tab:', activeTab);
         const options = this.getOperationOptions(activeTab);
+        console.log('Operation options:', options);
         
         const diskList = this.selectedDisks.map(d => d.device).join(', ');
         let confirmMessage = `Are you sure you want to ${activeTab} ${this.selectedDisks.length} disk(s)?\n\nDisks: ${diskList}`;
@@ -355,18 +358,26 @@ class SecureWipeApp {
         confirmMessage += `\n\nThis will permanently destroy all data on the selected disks!`;
         
         const confirmed = await window.electronAPI.showConfirmation(confirmMessage);
+        console.log('User confirmed:', confirmed);
         if (!confirmed) return;
 
         // Show progress modal
+        console.log('Showing progress modal');
         this.showProgressModal();
         
         try {
             this.currentOperation = activeTab;
+            console.log('Calling processMultipleDisks with:', {
+                disks: this.selectedDisks,
+                operation: activeTab,
+                ...options
+            });
             const result = await window.electronAPI.processMultipleDisks({
                 disks: this.selectedDisks,
                 operation: activeTab,
                 ...options
             });
+            console.log('processMultipleDisks result:', result);
 
             this.showResults(result);
         } catch (error) {
