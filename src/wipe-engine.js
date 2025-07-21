@@ -12,8 +12,7 @@ class WipeEngine {
         if (platform === 'linux') {
             return await this.wipeLinuxDisk(device, method, progressCallback, abortSignal);
         } else {
-            // For development on Windows, simulate the operation
-            return await this.simulateWipe(device, method, progressCallback, abortSignal);
+            throw new Error('Real disk operations are only supported on Linux');
         }
     }
 
@@ -169,7 +168,7 @@ class WipeEngine {
         const totalSteps = method === 'gutmann' ? 35 : method === 'dod' ? 3 : 1;
         
         for (let step = 1; step <= totalSteps; step++) {
-            for (let progress = 0; progress <= 100; progress += 10) {
+            for (let progress = 0; progress <= 100; progress += 5) {
                 if (abortSignal && abortSignal.aborted) {
                     throw new Error('Operation cancelled');
                 }
@@ -181,8 +180,8 @@ class WipeEngine {
                     status: `Simulating ${method} wipe - Pass ${step}/${totalSteps} - ${progress}%`
                 });
                 
-                // Simulate time delay
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Simulate time delay (more realistic)
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
         

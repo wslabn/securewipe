@@ -11,8 +11,7 @@ class FormatManager {
         if (platform === 'linux') {
             return await this.formatLinuxDisk(device, filesystem, label, progressCallback);
         } else {
-            // For development on Windows, simulate the operation
-            return await this.simulateFormat(device, filesystem, label, progressCallback);
+            throw new Error('Real disk operations are only supported on Linux');
         }
     }
 
@@ -178,8 +177,8 @@ class FormatManager {
                     status: `${steps[i]} ${totalProgress}%`
                 });
                 
-                // Simulate time delay
-                await new Promise(resolve => setTimeout(resolve, 200));
+                // Simulate time delay (more realistic)
+                await new Promise(resolve => setTimeout(resolve, 1500));
             }
         }
         

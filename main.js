@@ -30,6 +30,7 @@ function createSplashWindow() {
 
   splashWindow.loadFile('renderer/splash.html');
   splashWindow.center();
+  console.log('Splash window created successfully');
 }
 
 function createWindow() {
@@ -89,17 +90,24 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
 }
 
+// Suppress D-Bus errors
+process.env.DBUS_SESSION_BUS_ADDRESS = '';
+
 app.whenReady().then(() => {
   // Check if running as root
   if (process.platform === 'linux' && process.getuid && process.getuid() === 0) {
     console.warn('Running as root with --no-sandbox flag. This is necessary for disk operations but has security implications.');
   }
   
+  console.log('Electron app starting...');
+  
   // Show splash screen first
+  console.log('Creating splash window...');
   createSplashWindow();
   
   // Then create main window
   setTimeout(() => {
+    console.log('Creating main window...');
     createWindow();
   }, 500);
 });

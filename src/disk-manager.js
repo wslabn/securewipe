@@ -49,8 +49,7 @@ class DiskManager {
             return { disks };
         } catch (error) {
             console.error('Error getting Linux disks:', error);
-            // Only use mock data if real disk detection fails
-            return this.getMockDisks();
+            throw new Error(`Failed to detect disks: ${error.message}`);
         }
     }
 
