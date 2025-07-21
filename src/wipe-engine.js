@@ -68,14 +68,14 @@ class WipeEngine {
             case 'random':
                 return [{
                     command: 'dd',
-                    args: [`if=/dev/urandom`, `of=${device}`, 'bs=1M', 'status=progress'],
+                    args: [`if=/dev/urandom`, `of=${device}`, 'bs=1M', 'oflag=sync', 'status=progress'],
                     description: 'Random data pass'
                 }];
                 
             case 'zero':
                 return [{
                     command: 'dd',
-                    args: [`if=/dev/zero`, `of=${device}`, 'bs=1M', 'status=progress'],
+                    args: [`if=/dev/zero`, `of=${device}`, 'bs=1M', 'oflag=sync', 'status=progress'],
                     description: 'Zero fill pass'
                 }];
                 
