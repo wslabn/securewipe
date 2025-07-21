@@ -215,14 +215,20 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
       runningOperations.set(disk.device, { abortController });
       
       // Safety check for each disk
+      console.log('Running safety check for:', disk.device);
       const safetyCheck = operation === 'wipe' 
         ? await SafetyChecks.validateWipeOperation(diskOptions)
         : await SafetyChecks.validateFormatOperation(diskOptions);
+      
+      console.log('Safety check result:', safetyCheck);
         
       if (!safetyCheck.safe) {
+        console.log('Safety check failed:', safetyCheck.reason);
         runningOperations.delete(disk.device);
         return { device: disk.device, error: safetyCheck.reason };
       }
+      
+      console.log('Safety check passed, proceeding with operation');
       
       // Notify start of processing for this disk
       mainWindow.webContents.send('multi-disk-progress', {
@@ -235,14 +241,16 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
         let result;
         console.log(`Processing disk ${disk.device} with operation: ${operation}`);
         if (operation === 'wipe') {
-          console.log('Calling WipeEngine.wipeDisk...');
+          console.log('About to call WipeEngine.wipeDisk with device:', disk.device);
           result = await WipeEngine.wipeDisk(diskOptions, (progress) => {
+            console.log('Progress update:', progress);
             mainWindow.webContents.send('multi-disk-progress', {
               ...progress,
               device: disk.device,
               totalDisks: disks.length
             });
           }, abortController.signal);
+          console.log('WipeEngine.wipeDisk completed with result:', result);
         } else {
           result = await FormatManager.formatDisk(diskOptions, (progress) => {
             mainWindow.webContents.send('multi-disk-progress', {
