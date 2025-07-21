@@ -24,12 +24,19 @@ class WipeEngine {
         
         // Get disk size for accurate progress calculation
         const { execAsync } = require('util').promisify(require('child_process').exec);
-        const { stdout } = await execAsync(`blockdev --getsize64 ${device}`);
-        const diskSize = parseInt(stdout.trim());
-        console.log(`Disk size: ${diskSize} bytes`);
+        let diskSize;
+        try {
+            const { stdout } = await execAsync(`blockdev --getsize64 ${device}`);
+            diskSize = parseInt(stdout.trim());
+            console.log(`Disk size: ${diskSize} bytes`);
+        } catch (error) {
+            console.error('Error getting disk size:', error.message);
+            throw new Error(`Failed to get disk size for ${device}: ${error.message}`);
+        }
         
         const wipeCommands = this.getWipeCommands(device, method);
         console.log(`Will execute ${wipeCommands.length} passes`);
+        console.log('Wipe commands:', wipeCommands);
         
         for (let i = 0; i < wipeCommands.length; i++) {
             // Check if operation was cancelled
