@@ -214,9 +214,20 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
       // Track this operation for cancellation
       runningOperations.set(disk.device, { abortController });
       
-      // Auto-unmount if mounted (for wipe operations) - do this BEFORE safety check
+      // Auto-unmount if mounted (for wipe operations) - but check system disk first!
       if (operation === 'wipe') {
-        console.log('Attempting to unmount', disk.device, 'before safety check');
+        // CRITICAL: Check if this is a system disk before unmounting
+        console.log('Checking if', disk.device, 'is system disk before unmounting');
+        const isSystemDisk = await SafetyChecks.checkSystemDisk(disk.device);
+        const isBootDevice = await SafetyChecks.checkBootDevice(disk.device);
+        
+        if (isSystemDisk || isBootDevice) {
+          console.log('ABORT: Cannot unmount system/boot disk', disk.device);
+          runningOperations.delete(disk.device);
+          return { device: disk.device, error: `Cannot wipe system/boot disk ${disk.device}` };
+        }
+        
+        console.log('Safe to unmount', disk.device, '- not a system disk');
         try {
           const { exec } = require('child_process');
           const { promisify } = require('util');
