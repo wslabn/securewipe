@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // UI helpers
   showConfirmation: (message) => ipcRenderer.invoke('show-confirmation', message),
+  updateSplashStatus: (status) => ipcRenderer.invoke('update-splash-status', status),
   
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)

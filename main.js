@@ -9,10 +9,31 @@ const FormatManager = require('./src/format-manager');
 const SafetyChecks = require('./src/safety-checks');
 
 let mainWindow;
+let splashWindow;
 const isDev = process.argv.includes('--dev');
 const disableSandbox = process.argv.includes('--no-sandbox');
 
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 400,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'splash-preload.js')
+    },
+    icon: path.join(__dirname, 'icon.png')
+  });
+
+  splashWindow.loadFile('renderer/splash.html');
+  splashWindow.center();
+}
+
 function createWindow() {
+  // Create the main window but don't show it yet
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -29,8 +50,15 @@ function createWindow() {
 
   mainWindow.loadFile('renderer/index.html');
 
+  // When main window is ready, show it and close splash
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+    setTimeout(() => {
+      if (splashWindow) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+      mainWindow.show();
+    }, 1000); // Minimum splash display time
   });
 }
 
@@ -39,7 +67,14 @@ app.whenReady().then(() => {
   if (process.platform === 'linux' && process.getuid && process.getuid() === 0) {
     console.warn('Running as root with --no-sandbox flag. This is necessary for disk operations but has security implications.');
   }
-  createWindow();
+  
+  // Show splash screen first
+  createSplashWindow();
+  
+  // Then create main window
+  setTimeout(() => {
+    createWindow();
+  }, 500);
 });
 
 app.on('window-all-closed', () => {
@@ -57,6 +92,13 @@ app.on('activate', () => {
 // IPC Handlers
 ipcMain.handle('get-platform', () => {
   return os.platform();
+});
+
+ipcMain.handle('update-splash-status', (event, status) => {
+  if (splashWindow) {
+    splashWindow.webContents.send('update-status', status);
+  }
+  return true;
 });
 
 ipcMain.handle('get-disks', async () => {

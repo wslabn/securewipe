@@ -34,7 +34,13 @@ class SecureWipeApp {
         diskList.innerHTML = '<div class="loading">Loading available disks...</div>';
 
         try {
+            // Update splash screen status
+            await window.electronAPI.updateSplashStatus('Detecting available disks...');
+            
             const result = await window.electronAPI.getDisks();
+            
+            // Update splash screen status
+            await window.electronAPI.updateSplashStatus('Processing disk information...');
             
             if (result.error) {
                 diskList.innerHTML = `<div class="error">Error: ${result.error}</div>`;
@@ -46,6 +52,9 @@ class SecureWipeApp {
                 return;
             }
 
+            // Update splash screen status
+            await window.electronAPI.updateSplashStatus('Preparing interface...');
+            
             diskList.innerHTML = '';
             result.disks.forEach(disk => {
                 const diskElement = this.createDiskElement(disk);
