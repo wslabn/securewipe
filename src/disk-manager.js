@@ -2,6 +2,7 @@ const { spawn, exec } = require('child_process');
 const os = require('os');
 const util = require('util');
 const execAsync = util.promisify(exec);
+const SafetyChecks = require('./safety-checks');
 
 class DiskManager {
     static async getAvailableDisks() {
@@ -24,16 +25,23 @@ class DiskManager {
             
             const disks = [];
             
+            // Get system disk info for safety
+            const systemDiskInfo = await SafetyChecks.getBootDeviceInfo();
+            const systemDiskName = systemDiskInfo?.device?.replace('/dev/', '')?.replace(/\d+$/, '');
+            
             for (const device of data.blockdevices) {
                 // Only include physical disks (not partitions)
                 if (device.type === 'disk') {
+                    const isSystemDisk = systemDiskName && device.name.includes(systemDiskName);
+                    
                     disks.push({
                         device: `/dev/${device.name}`,
                         name: device.name,
                         size: this.parseSize(device.size),
                         model: device.model || 'Unknown',
                         type: device.type,
-                        mounted: device.mountpoint !== null
+                        mounted: device.mountpoint !== null,
+                        isSystemDisk: isSystemDisk
                     });
                 }
             }
@@ -41,7 +49,7 @@ class DiskManager {
             return { disks };
         } catch (error) {
             console.error('Error getting Linux disks:', error);
-            // Return mock data for development
+            // Only use mock data if real disk detection fails
             return this.getMockDisks();
         }
     }

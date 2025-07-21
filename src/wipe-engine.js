@@ -17,10 +17,15 @@ class WipeEngine {
         }
     }
 
-    static async wipeLinuxDisk(device, method, progressCallback) {
+    static async wipeLinuxDisk(device, method, progressCallback, abortSignal) {
         const wipeCommands = this.getWipeCommands(device, method);
         
         for (let i = 0; i < wipeCommands.length; i++) {
+            // Check if operation was cancelled
+            if (abortSignal && abortSignal.aborted) {
+                throw new Error('Operation cancelled');
+            }
+            
             const command = wipeCommands[i];
             const passNumber = i + 1;
             
@@ -30,8 +35,11 @@ class WipeEngine {
             });
             
             try {
-                await this.executeWipeCommand(command, progressCallback, passNumber, wipeCommands.length);
+                await this.executeWipeCommand(command, progressCallback, passNumber, wipeCommands.length, abortSignal);
             } catch (error) {
+                if (error.message === 'Operation cancelled') {
+                    throw error; // Propagate cancellation
+                }
                 throw new Error(`Wipe failed on pass ${passNumber}: ${error.message}`);
             }
         }
@@ -99,13 +107,25 @@ class WipeEngine {
         }
     }
 
-    static async executeWipeCommand(command, progressCallback, passNumber, totalPasses) {
+    static async executeWipeCommand(command, progressCallback, passNumber, totalPasses, abortSignal) {
         return new Promise((resolve, reject) => {
             const process = spawn(command.command, command.args);
+            let aborted = false;
+            
+            // Handle abort signal
+            if (abortSignal) {
+                abortSignal.addEventListener('abort', () => {
+                    aborted = true;
+                    process.kill('SIGTERM');
+                    reject(new Error('Operation cancelled'));
+                });
+            }
             
             let lastProgress = 0;
             
             process.stderr.on('data', (data) => {
+                if (aborted) return;
+                
                 const output = data.toString();
                 
                 // Parse dd progress output
@@ -128,6 +148,8 @@ class WipeEngine {
             });
             
             process.on('close', (code) => {
+                if (aborted) return;
+                
                 if (code === 0) {
                     resolve();
                 } else {
@@ -136,6 +158,7 @@ class WipeEngine {
             });
             
             process.on('error', (error) => {
+                if (aborted) return;
                 reject(error);
             });
         });
