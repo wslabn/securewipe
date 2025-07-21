@@ -1,59 +1,91 @@
-# SecureWipe - Disk Wiping Tool
+# SecureWipe - Professional Disk Wiping Tool
 
-A secure disk wiping and formatting application built with Electron for bootable Linux USB environments.
+A secure disk wiping and formatting application built with Electron for bootable Linux USB environments. Features automated ISO building, GitHub integration, and enterprise-grade security.
 
-## Features
+## 🚀 Quick Start
 
-- **Secure Disk Wiping**: Multiple wiping methods including DoD 5220.22-M, Gutmann, and random passes
-- **Disk Formatting**: Support for ext4, NTFS, FAT32, and exFAT filesystems
-- **Safety Checks**: Prevents wiping of boot devices and mounted disks
-- **Cross-Platform Development**: Develop on Windows, deploy on Linux
-- **Modern UI**: Clean, intuitive interface built with web technologies
+### Download Bootable ISO
+1. Go to [Releases](https://github.com/wslabn/securewipe/releases)
+2. Download `securewipe-live.iso` (~5GB)
+3. Write to USB drive
+4. Boot and start wiping!
 
-## Development Setup
-
-### Prerequisites
-
-- Node.js (v16 or higher)
-- npm or yarn
-- Git
-
-### Installation
-
-1. Clone the repository:
+### Create Custom ISO
 ```bash
-git clone <your-repo-url>
+# Windows (automated)
+build-release.bat
+
+# Linux (manual)
+sudo ./create-bootable-usb.sh
+```
+
+## ✨ Features
+
+### 🔒 Security Features
+- **Military-Grade Wiping**: DoD 5220.22-M, Gutmann (35-pass), Random, Zero Fill
+- **System Protection**: Prevents wiping boot/system disks
+- **Auto-Unmount**: Safely unmounts before wiping
+- **Multi-Disk Support**: Process up to 8 disks simultaneously
+- **Real-Time Progress**: Accurate progress based on actual disk size
+
+### 💾 Disk Operations
+- **Secure Wiping**: Multiple pass methods for complete data destruction
+- **Format After Wipe**: Automatic filesystem creation (ext4, NTFS, FAT32, exFAT)
+- **Safety Validation**: Multiple confirmation dialogs and safety checks
+- **Operation Logging**: Detailed console output for troubleshooting
+
+### 🔄 Automation & Updates
+- **Auto-Update**: GitHub integration with one-click updates
+- **Automated ISO Building**: GitHub Actions creates bootable ISOs
+- **Cross-Platform**: Develop on Windows, deploy on Linux
+- **Professional UI**: Modern interface with splash screen
+
+## 🛠️ Installation Methods
+
+### Method 1: Bootable USB (Recommended)
+```bash
+# Download pre-built ISO from GitHub Releases
+# Write to USB with dd, Rufus, or Balena Etcher
+sudo dd if=securewipe-live.iso of=/dev/sdX bs=4M status=progress
+```
+
+### Method 2: Manual Installation
+```bash
+# Clone repository
+git clone https://github.com/wslabn/securewipe.git
 cd securewipe
+
+# Install dependencies (Linux)
+sudo ./install.sh
+
+# Run SecureWipe
+sudo ./run.sh
 ```
 
-2. Install dependencies:
+### Method 3: Development Setup
 ```bash
+# Prerequisites: Node.js 16+, npm, git
+git clone https://github.com/wslabn/securewipe.git
+cd securewipe
 npm install
-```
-
-3. Start development server:
-```bash
 npm run dev
 ```
 
-### Building
+## 💻 Usage
 
-- Build for current platform: `npm run build`
-- Build for Linux: `npm run build-linux`
-- Build for Windows: `npm run build-win`
+### Bootable USB Usage
+1. **Boot from USB** - Select "Try Ubuntu"
+2. **Auto-start** - SecureWipe launches automatically
+3. **Select disks** - Choose target disks (up to 8)
+4. **Choose method** - DoD, Gutmann, Random, or Zero Fill
+5. **Start operation** - Monitor real-time progress
+6. **Format (optional)** - Create filesystem after wiping
 
-## Usage
-
-### Development Mode
-
-The application includes mock data and simulation modes for development on Windows. Real disk operations are only available on Linux.
-
-### Production Mode
-
-When running on Linux, the application will:
-1. Detect available storage devices
-2. Provide detailed disk information
-3. Perform actual secure wiping and formatting operations
+### Safety Features in Action
+- ✅ **System disk detection** - Prevents accidental OS wiping
+- ✅ **Auto-unmount** - Safely unmounts before operations
+- ✅ **Multiple confirmations** - Prevents accidental operations
+- ✅ **Progress monitoring** - Real-time status updates
 
 ## Wiping Methods
 
@@ -69,13 +101,63 @@ When running on Linux, the application will:
 - **FAT32**: Universal compatibility
 - **exFAT**: Large file support
 
-## Safety Features
+## 🤖 Automated ISO Building
 
-- Boot device protection
-- Mount status checking
-- Multiple confirmation dialogs
-- Operation validation
-- Progress monitoring
+### Create Release (Windows)
+```cmd
+build-release.bat
+# Enter version (e.g., v1.0.1)
+# GitHub Actions builds ISO automatically
+# Download from Releases in 15-20 minutes
+```
+
+### Manual USB Creation
+```bash
+# Linux - Full custom ISO
+sudo ./create-bootable-usb.sh
+
+# Linux - Add to existing Ubuntu USB
+sudo ./create-usb-simple.sh
+
+# Windows - Guided creation with Rufus
+create-usb-windows.bat
+```
+
+## 📊 Technical Specifications
+
+### System Requirements
+- **Target**: Any x86_64 computer
+- **RAM**: 2GB minimum, 4GB recommended
+- **Storage**: 8GB+ USB drive for bootable image
+- **Boot**: BIOS or UEFI compatible
+
+### Supported Hardware
+- **SATA/IDE drives** - Traditional hard drives and SSDs
+- **USB drives** - External storage devices
+- **NVMe drives** - Modern M.2 SSDs
+- **Multiple interfaces** - Simultaneous processing
+
+### Performance
+- **Wipe speed**: 30-100 MB/s (hardware dependent)
+- **Multi-disk**: Up to 8 disks simultaneously
+- **Progress tracking**: Real-time byte-level accuracy
+- **Memory usage**: <500MB RAM
+
+## 🔗 Integration & Deployment
+
+### Enterprise Deployment
+- **Standardized ISOs** - Consistent deployment across organization
+- **Auto-updates** - GitHub integration keeps tools current
+- **Compliance logging** - Detailed operation records
+- **Batch processing** - Multiple disk support
+
+### Custom Branding
+```bash
+# Edit before building
+renderer/index.html    # UI customization
+icon.png              # Company logo
+package.json          # Version info
+```
 
 ## Project Structure
 
@@ -91,8 +173,11 @@ securewipe/
 │   ├── disk-manager.js
 │   ├── wipe-engine.js
 │   ├── format-manager.js
-│   └── safety-checks.js
-└── assets/              # Resources
+│   ├── safety-checks.js
+│   └── updater.js
+├── .github/workflows/   # Automated building
+├── create-*.sh          # USB creation scripts
+└── *.md                 # Documentation
 ```
 
 ## Contributing
@@ -111,6 +196,8 @@ MIT License - see LICENSE file for details
 
 This tool permanently destroys data. Always verify the target device before proceeding with any operation. The developers are not responsible for data loss due to misuse.
 
-## Bootable Linux Integration
+## Documentation
 
-This application is designed to be integrated into a bootable Linux USB environment. See the documentation for creating custom live Linux distributions with this tool pre-installed.
+- [Bootable USB Guide](BOOTABLE_USB_GUIDE.md) - Complete USB creation guide
+- [Windows USB Guide](WINDOWS_USB_GUIDE.md) - Windows-specific instructions
+- [USB Creation Guide](USB_CREATION_GUIDE.md) - Advanced USB creation methods

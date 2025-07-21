@@ -1,6 +1,6 @@
 {
   "name": "securewipe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "build": "production-ready",
   "description": "Secure disk wiping and formatting tool for bootable Linux USB",
   "main": "main.js",
