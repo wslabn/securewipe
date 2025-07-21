@@ -151,14 +151,19 @@ class SafetyChecks {
         
         try {
             if (platform === 'linux') {
+                console.log(`Checking if ${device} is system disk...`);
                 // Check if device contains important system directories
                 const { stdout } = await execAsync(`lsblk -o NAME,MOUNTPOINT ${device} | grep -E "(boot|root|usr|var)"`);
-                return stdout.trim().length > 0;
+                console.log(`lsblk output for ${device}:`, stdout);
+                const isSystemDisk = stdout.trim().length > 0;
+                console.log(`${device} is system disk:`, isSystemDisk);
+                return isSystemDisk;
             } else if (platform === 'win32') {
                 // For Windows, assume first physical drive is system disk
                 return device.toLowerCase().includes('physicaldrive0');
             }
         } catch (error) {
+            console.log(`Error checking system disk for ${device}:`, error.message);
             // If we can't determine, err on the side of caution
             return true;
         }
