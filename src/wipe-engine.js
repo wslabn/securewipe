@@ -23,7 +23,10 @@ class WipeEngine {
         console.log(`Starting real wipe operation: ${method} on ${device}`);
         
         // Get disk size for accurate progress calculation
-        const { execAsync } = require('util').promisify(require('child_process').exec);
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
         let diskSize;
         try {
             const { stdout } = await execAsync(`blockdev --getsize64 ${device}`);
