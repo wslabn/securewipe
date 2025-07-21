@@ -2,6 +2,8 @@ name: Build SecureWipe ISO
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -16,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux
+        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux isolinux-utils
     
     - name: Download Ubuntu ISO
       run: |
@@ -32,29 +34,37 @@ jobs:
         sudo umount /tmp/iso-mount
         sudo chmod -R +w /tmp/iso-extract
         
-        # Install SecureWipe
+        # Install SecureWipe (exclude large files)
         sudo mkdir -p /tmp/iso-extract/home/securewipe
-        sudo cp -r ./* /tmp/iso-extract/home/securewipe/
+        sudo cp -r --exclude='*.iso' ./* /tmp/iso-extract/home/securewipe/
         
         # Create autostart
         sudo mkdir -p /tmp/iso-extract/etc/skel/.config/autostart
         sudo cp autostart.desktop /tmp/iso-extract/etc/skel/.config/autostart/
         
-        # Build ISO
+        # Build ISO with xorriso (handles large files)
         cd /tmp/iso-extract
-        sudo mkisofs -D -r -V "SecureWipe Live" -cache-inodes -J -l \
+        sudo xorriso -as mkisofs -r -V "SecureWipe Live" -J -l \
           -b isolinux/isolinux.bin -c isolinux/boot.cat \
           -no-emul-boot -boot-load-size 4 -boot-info-table \
+          -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
           -o /tmp/securewipe-live.iso .
         
-        # Make hybrid bootable
-        sudo isohybrid /tmp/securewipe-live.iso
         
         # Move to workspace
         sudo mv /tmp/securewipe-live.iso ./securewipe-live.iso
         sudo chown runner:runner ./securewipe-live.iso
     
+    - name: Upload ISO Artifact
+      if: "!startsWith(github.ref, 'refs/tags/')"
+      uses: actions/upload-artifact@v3
+      with:
+        name: securewipe-live-iso
+        path: securewipe-live.iso
+        retention-days: 30
+    
     - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: securewipe-live.iso
