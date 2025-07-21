@@ -16,7 +16,7 @@ if %errorLevel% neq 0 (
 echo Step 1: Download Ubuntu 22.04 LTS
 echo ==================================
 echo Please download Ubuntu 22.04 LTS Desktop ISO from:
-echo https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso
+echo https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
 echo.
 set /p "iso_path=Enter full path to Ubuntu ISO file: "
 

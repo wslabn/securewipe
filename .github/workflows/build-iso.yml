@@ -20,14 +20,14 @@ jobs:
     
     - name: Download Ubuntu ISO
       run: |
-        wget -O ubuntu-22.04.3-desktop-amd64.iso \
-          https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso
+        wget -O ubuntu-22.04.5-desktop-amd64.iso \
+          https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
     
     - name: Build SecureWipe ISO
       run: |
         # Extract Ubuntu ISO
         mkdir -p /tmp/iso-mount /tmp/iso-extract
-        sudo mount -o loop ubuntu-22.04.3-desktop-amd64.iso /tmp/iso-mount
+        sudo mount -o loop ubuntu-22.04.5-desktop-amd64.iso /tmp/iso-mount
         sudo cp -rT /tmp/iso-mount /tmp/iso-extract
         sudo umount /tmp/iso-mount
         sudo chmod -R +w /tmp/iso-extract

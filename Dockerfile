@@ -18,8 +18,8 @@ WORKDIR /build
 COPY . /build/securewipe/
 
 # Download Ubuntu ISO
-RUN wget -O ubuntu-22.04.3-desktop-amd64.iso \
-    https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso
+RUN wget -O ubuntu-22.04.5-desktop-amd64.iso \
+    https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso
 
 # Create build script
 RUN echo '#!/bin/bash\n\
@@ -27,7 +27,7 @@ set -e\n\
 \n\
 # Extract Ubuntu ISO\n\
 mkdir -p /tmp/iso-mount /tmp/iso-extract\n\
-mount -o loop ubuntu-22.04.3-desktop-amd64.iso /tmp/iso-mount\n\
+mount -o loop ubuntu-22.04.5-desktop-amd64.iso /tmp/iso-mount\n\
 cp -rT /tmp/iso-mount /tmp/iso-extract\n\
 umount /tmp/iso-mount\n\
 chmod -R +w /tmp/iso-extract\n\

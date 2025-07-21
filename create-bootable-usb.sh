@@ -4,8 +4,8 @@
 set -e
 
 # Configuration
-UBUNTU_ISO_URL="https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso"
-UBUNTU_ISO="ubuntu-22.04.3-desktop-amd64.iso"
+UBUNTU_ISO_URL="https://releases.ubuntu.com/22.04/ubuntu-22.04.5-desktop-amd64.iso"
+UBUNTU_ISO="ubuntu-22.04.5-desktop-amd64.iso"
 WORK_DIR="/tmp/securewipe-usb"
 MOUNT_DIR="$WORK_DIR/mount"
 EXTRACT_DIR="$WORK_DIR/extract"
