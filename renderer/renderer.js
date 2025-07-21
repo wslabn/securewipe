@@ -382,6 +382,7 @@ class SecureWipeApp {
             this.showResults(result);
         } catch (error) {
             console.error('Operation error:', error);
+            console.error('Error stack:', error.stack);
             this.showResults({ error: error.message });
         }
     }
@@ -463,7 +464,11 @@ class SecureWipeApp {
     }
 
     showResults(result) {
-        this.hideProgressModal();
+        console.log('showResults called with:', result);
+        // Keep modal visible for debugging
+        setTimeout(() => {
+            this.hideProgressModal();
+        }, 5000); // 5 second delay
         document.getElementById('resultsSection').style.display = 'block';
 
         const resultsDiv = document.getElementById('results');
