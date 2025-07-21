@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install dependencies
       run: |
@@ -57,7 +57,7 @@ jobs:
     
     - name: Upload ISO Artifact
       if: "!startsWith(github.ref, 'refs/tags/')"
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: securewipe-live-iso
         path: securewipe-live.iso
