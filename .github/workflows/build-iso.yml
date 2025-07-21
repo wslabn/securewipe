@@ -18,7 +18,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux isolinux-utils
+        sudo apt-get install -y wget genisoimage syslinux-utils xorriso isolinux
     
     - name: Download Ubuntu ISO
       run: |
@@ -47,7 +47,7 @@ jobs:
         sudo xorriso -as mkisofs -r -V "SecureWipe Live" -J -l \
           -b isolinux/isolinux.bin -c isolinux/boot.cat \
           -no-emul-boot -boot-load-size 4 -boot-info-table \
-          -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+          -isohybrid-mbr /usr/lib/syslinux/mbr/isohdpfx.bin \
           -o /tmp/securewipe-live.iso .
         
         
