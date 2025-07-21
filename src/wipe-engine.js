@@ -17,7 +17,9 @@ class WipeEngine {
     }
 
     static async wipeLinuxDisk(device, method, progressCallback, abortSignal) {
+        console.log(`Starting real wipe operation: ${method} on ${device}`);
         const wipeCommands = this.getWipeCommands(device, method);
+        console.log(`Will execute ${wipeCommands.length} passes`);
         
         for (let i = 0; i < wipeCommands.length; i++) {
             // Check if operation was cancelled
@@ -28,6 +30,8 @@ class WipeEngine {
             const command = wipeCommands[i];
             const passNumber = i + 1;
             
+            console.log(`Starting pass ${passNumber}/${wipeCommands.length}: ${command.command} ${command.args.join(' ')}`);
+            
             progressCallback({
                 percentage: Math.floor((i / wipeCommands.length) * 100),
                 status: `Pass ${passNumber}/${wipeCommands.length}: ${command.description}`
@@ -35,7 +39,9 @@ class WipeEngine {
             
             try {
                 await this.executeWipeCommand(command, progressCallback, passNumber, wipeCommands.length, abortSignal);
+                console.log(`Completed pass ${passNumber}`);
             } catch (error) {
+                console.error(`Pass ${passNumber} failed:`, error.message);
                 if (error.message === 'Operation cancelled') {
                     throw error; // Propagate cancellation
                 }
@@ -107,9 +113,12 @@ class WipeEngine {
     }
 
     static async executeWipeCommand(command, progressCallback, passNumber, totalPasses, abortSignal) {
+        console.log(`Executing: ${command.command} ${command.args.join(' ')}`);
         return new Promise((resolve, reject) => {
             const process = spawn(command.command, command.args);
             let aborted = false;
+            
+            console.log(`Process started with PID: ${process.pid}`);
             
             // Handle abort signal
             if (abortSignal) {
@@ -122,10 +131,16 @@ class WipeEngine {
             
             let lastProgress = 0;
             
+            process.stdout.on('data', (data) => {
+                if (aborted) return;
+                console.log('STDOUT:', data.toString());
+            });
+            
             process.stderr.on('data', (data) => {
                 if (aborted) return;
                 
                 const output = data.toString();
+                console.log('STDERR:', output);
                 
                 // Parse dd progress output
                 const progressMatch = output.match(/(\d+)\s+bytes.*copied/);
@@ -147,11 +162,14 @@ class WipeEngine {
             });
             
             process.on('close', (code) => {
+                console.log(`Process closed with code: ${code}`);
                 if (aborted) return;
                 
                 if (code === 0) {
+                    console.log('Command completed successfully');
                     resolve();
                 } else {
+                    console.error(`Command failed with exit code: ${code}`);
                     reject(new Error(`Command failed with code ${code}`));
                 }
             });
