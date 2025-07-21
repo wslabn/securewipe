@@ -214,6 +214,22 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
       // Track this operation for cancellation
       runningOperations.set(disk.device, { abortController });
       
+      // Auto-unmount if mounted (for wipe operations) - do this BEFORE safety check
+      if (operation === 'wipe') {
+        console.log('Attempting to unmount', disk.device, 'before safety check');
+        try {
+          const { exec } = require('child_process');
+          const { promisify } = require('util');
+          const execAsync = promisify(exec);
+          
+          // Unmount all partitions on this device
+          await execAsync(`umount ${disk.device}* 2>/dev/null || true`);
+          console.log('Unmount completed for', disk.device);
+        } catch (error) {
+          console.log('Unmount failed (may not have been mounted):', error.message);
+        }
+      }
+      
       // Safety check for each disk
       console.log('Running safety check for:', disk.device);
       const safetyCheck = operation === 'wipe' 
@@ -229,22 +245,6 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
       }
       
       console.log('Safety check passed, proceeding with operation');
-      
-      // Auto-unmount if mounted (for wipe operations)
-      if (operation === 'wipe') {
-        console.log('Attempting to unmount', disk.device);
-        try {
-          const { exec } = require('child_process');
-          const { promisify } = require('util');
-          const execAsync = promisify(exec);
-          
-          // Unmount all partitions on this device
-          await execAsync(`umount ${disk.device}* 2>/dev/null || true`);
-          console.log('Unmount completed for', disk.device);
-        } catch (error) {
-          console.log('Unmount failed (may not have been mounted):', error.message);
-        }
-      }
       
       // Notify start of processing for this disk
       mainWindow.webContents.send('multi-disk-progress', {
