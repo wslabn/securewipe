@@ -196,12 +196,19 @@ ipcMain.handle('get-system-disk', async () => {
 });
 
 ipcMain.handle('process-multiple-disks', async (event, options) => {
+  console.log('=== process-multiple-disks called ===');
+  console.log('Options received:', JSON.stringify(options, null, 2));
   try {
     const { disks, operation } = options;
+    console.log('Disks:', disks);
+    console.log('Operation:', operation);
     
     // Process all disks in parallel
+    console.log('Starting to process', disks.length, 'disks');
     const diskPromises = disks.map(async (disk, index) => {
+      console.log(`Processing disk ${index + 1}:`, disk);
       const diskOptions = { ...options, device: disk.device };
+      console.log('Disk options:', diskOptions);
       const abortController = new AbortController();
       
       // Track this operation for cancellation
