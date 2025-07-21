@@ -44,11 +44,13 @@ jobs:
         
         # Build ISO with xorriso (handles large files)
         cd /tmp/iso-extract
-        sudo xorriso -as mkisofs -r -V "SecureWipe Live" -J -l \
+        sudo xorriso -as mkisofs -r -V "SecureWipe_Live" -J -l \
           -b isolinux/isolinux.bin -c isolinux/boot.cat \
           -no-emul-boot -boot-load-size 4 -boot-info-table \
-          -isohybrid-mbr /usr/lib/syslinux/mbr/isohdpfx.bin \
           -o /tmp/securewipe-live.iso .
+        
+        # Make hybrid bootable separately
+        sudo isohybrid /tmp/securewipe-live.iso || true
         
         
         # Move to workspace
