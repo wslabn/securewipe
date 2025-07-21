@@ -7,11 +7,14 @@ class WipeEngine {
         const { device, method } = options;
         const platform = os.platform();
         
+        console.log(`Platform detected: ${platform}`);
         console.log(`Starting wipe operation: ${method} on ${device}`);
         
         if (platform === 'linux') {
+            console.log('Using Linux real disk operations');
             return await this.wipeLinuxDisk(device, method, progressCallback, abortSignal);
         } else {
+            console.log('Platform not Linux, throwing error');
             throw new Error('Real disk operations are only supported on Linux');
         }
     }

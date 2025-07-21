@@ -226,7 +226,9 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
       
       try {
         let result;
+        console.log(`Processing disk ${disk.device} with operation: ${operation}`);
         if (operation === 'wipe') {
+          console.log('Calling WipeEngine.wipeDisk...');
           result = await WipeEngine.wipeDisk(diskOptions, (progress) => {
             mainWindow.webContents.send('multi-disk-progress', {
               ...progress,
