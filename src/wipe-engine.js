@@ -21,6 +21,13 @@ class WipeEngine {
 
     static async wipeLinuxDisk(device, method, progressCallback, abortSignal) {
         console.log(`Starting real wipe operation: ${method} on ${device}`);
+        
+        // Get disk size for accurate progress calculation
+        const { execAsync } = require('util').promisify(require('child_process').exec);
+        const { stdout } = await execAsync(`blockdev --getsize64 ${device}`);
+        const diskSize = parseInt(stdout.trim());
+        console.log(`Disk size: ${diskSize} bytes`);
+        
         const wipeCommands = this.getWipeCommands(device, method);
         console.log(`Will execute ${wipeCommands.length} passes`);
         
@@ -41,7 +48,7 @@ class WipeEngine {
             });
             
             try {
-                await this.executeWipeCommand(command, progressCallback, passNumber, wipeCommands.length, abortSignal);
+                await this.executeWipeCommand(command, progressCallback, passNumber, wipeCommands.length, abortSignal, diskSize);
                 console.log(`Completed pass ${passNumber}`);
             } catch (error) {
                 console.error(`Pass ${passNumber} failed:`, error.message);
@@ -115,13 +122,14 @@ class WipeEngine {
         }
     }
 
-    static async executeWipeCommand(command, progressCallback, passNumber, totalPasses, abortSignal) {
+    static async executeWipeCommand(command, progressCallback, passNumber, totalPasses, abortSignal, diskSize) {
         console.log(`Executing: ${command.command} ${command.args.join(' ')}`);
         return new Promise((resolve, reject) => {
             const process = spawn(command.command, command.args);
             let aborted = false;
             
             console.log(`Process started with PID: ${process.pid}`);
+            console.log(`Disk size for progress: ${diskSize} bytes`);
             
             // Handle abort signal
             if (abortSignal) {
@@ -154,16 +162,17 @@ class WipeEngine {
                 const progressMatch = output.match(/(\d+)\s+bytes.*copied/);
                 if (progressMatch) {
                     const bytes = parseInt(progressMatch[1]);
-                    // This is a simplified progress calculation
-                    const progress = Math.min(99, Math.floor(bytes / 1000000)); // Rough estimate
+                    // Calculate actual progress based on disk size
+                    const passProgress = Math.min(99, Math.floor((bytes / diskSize) * 100));
                     
-                    if (progress > lastProgress) {
-                        lastProgress = progress;
-                        const overallProgress = Math.floor(((passNumber - 1) / totalPasses * 100) + (progress / totalPasses));
+                    if (passProgress > lastProgress) {
+                        lastProgress = passProgress;
+                        // Calculate overall progress across all passes
+                        const overallProgress = Math.floor(((passNumber - 1) / totalPasses * 100) + (passProgress / totalPasses));
                         
                         progressCallback({
                             percentage: overallProgress,
-                            status: `${command.description} - ${progress}%`
+                            status: `${command.description} - Pass ${passNumber}/${totalPasses} - ${passProgress}%`
                         });
                     }
                 }
