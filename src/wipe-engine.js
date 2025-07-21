@@ -139,10 +139,15 @@ class WipeEngine {
                 console.log('STDOUT:', data.toString());
             });
             
+
+            
+            let stderrOutput = '';
+            
             process.stderr.on('data', (data) => {
                 if (aborted) return;
                 
                 const output = data.toString();
+                stderrOutput += output;
                 console.log('STDERR:', output);
                 
                 // Parse dd progress output
@@ -168,7 +173,10 @@ class WipeEngine {
                 console.log(`Process closed with code: ${code}`);
                 if (aborted) return;
                 
-                if (code === 0) {
+                // Exit code 1 with "No space left on device" means successful wipe
+                const isSuccessfulWipe = code === 1 && stderrOutput.includes('No space left on device');
+                
+                if (code === 0 || isSuccessfulWipe) {
                     console.log('Command completed successfully');
                     resolve();
                 } else {

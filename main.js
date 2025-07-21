@@ -251,6 +251,21 @@ ipcMain.handle('process-multiple-disks', async (event, options) => {
             });
           }, abortController.signal);
           console.log('WipeEngine.wipeDisk completed with result:', result);
+          
+          // Check if format after wipe is requested
+          if (diskOptions.formatAfter && diskOptions.filesystem) {
+            console.log('Starting format after wipe with filesystem:', diskOptions.filesystem);
+            const formatResult = await FormatManager.formatDisk(diskOptions, (progress) => {
+              console.log('Format progress:', progress);
+              mainWindow.webContents.send('multi-disk-progress', {
+                ...progress,
+                device: disk.device,
+                totalDisks: disks.length
+              });
+            });
+            console.log('Format after wipe completed:', formatResult);
+            result.details += ` and formatted as ${diskOptions.filesystem}`;
+          }
         } else {
           result = await FormatManager.formatDisk(diskOptions, (progress) => {
             mainWindow.webContents.send('multi-disk-progress', {
