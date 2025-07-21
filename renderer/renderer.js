@@ -5,6 +5,42 @@ class SecureWipeApp {
         this.systemDisk = null;
         this.maxDiskSelection = 8; // Reasonable limit for parallel operations
         this.init();
+        this.setupUpdateButton();
+    }
+    
+    setupUpdateButton() {
+        const updateBtn = document.getElementById('updateBtn');
+        if (updateBtn) {
+            updateBtn.addEventListener('click', async () => {
+                updateBtn.textContent = '🔄 Checking...';
+                updateBtn.disabled = true;
+                
+                try {
+                    const result = await window.electronAPI.checkUpdates();
+                    
+                    if (result.updateAvailable) {
+                        const confirmed = confirm(`Update available: ${result.latestVersion}\nCurrent: ${result.currentVersion}\n\nUpdate now?`);
+                        if (confirmed) {
+                            updateBtn.textContent = '⬇️ Updating...';
+                            const updateResult = await window.electronAPI.performUpdate();
+                            
+                            if (updateResult.success) {
+                                alert('Update completed! Please restart the application.');
+                            } else {
+                                alert(`Update failed: ${updateResult.error}`);
+                            }
+                        }
+                    } else {
+                        alert('You are running the latest version!');
+                    }
+                } catch (error) {
+                    alert(`Update check failed: ${error.message}`);
+                } finally {
+                    updateBtn.textContent = '🔄 Check Updates';
+                    updateBtn.disabled = false;
+                }
+            });
+        }
     }
 
     async init() {

@@ -7,6 +7,7 @@ const DiskManager = require('./src/disk-manager');
 const WipeEngine = require('./src/wipe-engine');
 const FormatManager = require('./src/format-manager');
 const SafetyChecks = require('./src/safety-checks');
+const AutoUpdater = require('./src/updater');
 
 let mainWindow;
 let splashWindow;
@@ -100,6 +101,14 @@ app.whenReady().then(() => {
   }
   
   console.log('Electron app starting...');
+  
+  // Check for updates on startup
+  const updater = new AutoUpdater();
+  updater.checkForUpdates().then(result => {
+    if (result.updateAvailable) {
+      console.log(`Update available: ${result.latestVersion}`);
+    }
+  });
   
   // Show splash screen first
   console.log('Creating splash window...');
@@ -353,4 +362,24 @@ ipcMain.handle('show-confirmation', async (event, message) => {
   });
   
   return result.response === 1;
+});
+
+ipcMain.handle('check-updates', async () => {
+  try {
+    const updater = new AutoUpdater();
+    return await updater.checkForUpdates();
+  } catch (error) {
+    console.error('Error checking updates:', error);
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('perform-update', async () => {
+  try {
+    const updater = new AutoUpdater();
+    return await updater.performUpdate();
+  } catch (error) {
+    console.error('Error performing update:', error);
+    return { error: error.message };
+  }
 });

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SecureWipe
+Comment=Secure Disk Wiping Tool
+Exec=/home/user/securewipe/run.sh
+Icon=/home/user/securewipe/icon.png
+Terminal=true
+Categories=System;Security;
+StartupNotify=true
