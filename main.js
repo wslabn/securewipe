@@ -10,6 +10,7 @@ const SafetyChecks = require('./src/safety-checks');
 
 let mainWindow;
 const isDev = process.argv.includes('--dev');
+const disableSandbox = process.argv.includes('--no-sandbox');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -18,7 +19,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      sandbox: false // Allow running as root
     },
     icon: path.join(__dirname, 'icon.png'),
     show: false,
@@ -32,7 +34,13 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Check if running as root
+  if (process.platform === 'linux' && process.getuid && process.getuid() === 0) {
+    console.warn('Running as root with --no-sandbox flag. This is necessary for disk operations but has security implications.');
+  }
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

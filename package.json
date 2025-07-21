@@ -4,8 +4,8 @@
   "description": "Secure disk wiping and formatting tool for bootable Linux USB",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
+    "start": "electron . --no-sandbox",
+    "dev": "electron . --dev --no-sandbox",
     "build": "electron-builder",
     "build-linux": "electron-builder --linux",
     "build-win": "electron-builder --win",
